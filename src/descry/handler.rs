@@ -104,7 +104,5 @@ impl HookFunc for Handler {
                 });
             }
         }
-
-        println!("Returning 200");
     }
 }
