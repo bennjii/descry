@@ -1,5 +1,6 @@
 use std::{collections::HashMap, thread};
 
+use colored::Colorize;
 use rifling::{HookFunc, Delivery, DeliveryType};
 use run_script::{ScriptOptions};
 use yaml_rust::Yaml;
@@ -85,8 +86,7 @@ impl HookFunc for Handler {
         // Execute the commands
         for (section_name, command) in commands_all {
             if let Some(exec) = command {
-                println!("Running commands in \"{}\" section", &section_name);
-                println!("Parsed command: {}", &exec);
+                println!("Running commands in \"{}\" section", format!("{}", &section_name).green().bold());
                 let mut options = ScriptOptions::new();
                 options.exit_on_error = self.config["settings"]["exit_on_error"]
                     .as_bool()
@@ -94,17 +94,13 @@ impl HookFunc for Handler {
                 options.print_commands = self.config["settings"]["print_commands"]
                     .as_bool()
                     .unwrap_or(false);
-                println!("Executor option: {:#?}", &options);
                 let args = vec![];
 
                 thread::spawn(move || {
-                    let (code, output, error) = run_script::run(&exec.as_str(), &args, &options)
+                    let (code, _output, _error) = run_script::run(&exec.as_str(), &args, &options)
                         .expect("Failed to execute command");
 
                     println!("Commands in \"{}\" section exited with code {}", &section_name, code);
-
-                    println!("stdout:\n{}", output);
-                    println!("stderr:\n{}", error);
                 });
             }
         }
