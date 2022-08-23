@@ -16,19 +16,13 @@ fn main() {
                 .short("c")
                 .long("config")
                 .value_name("FILE")
-                .help("Sets a custom execution path (default: descry.sh)")
-                .takes_value(true),
-            Arg::with_name("test")
-                .short("t")
-                .long("test")
-                .value_name("FILE")
-                .help("Executes the file passed in to test its execution. (default: descry.sh)")
+                .help("Sets a custom execution path (default: descry.yaml)")
                 .takes_value(true),
         ])
         .after_help("")
         .get_matches();
 
-    let config_file = matches.value_of("config").unwrap_or("descry.sh");
+    let config_file = matches.value_of("config").unwrap_or("descry.yaml");
 
     if let Err(e) = descry::init(config_file) {
         panic!("Unable to run application: {}", e);

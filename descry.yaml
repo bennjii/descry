@@ -10,6 +10,8 @@ events:
   all: echo "This command will be executed in all the events, the current event is {event}";
   else: echo "\"${SENDER}\" with ID \"${SENDER_ID}\" sent {event} event";
   push: |
+    echo "Whoa"
+    git pull origin master
     npm run build
     pm2 restart reseda
   watch: |

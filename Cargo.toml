@@ -15,7 +15,7 @@ log = "~0.4"
 clap = { version = "~2.33", default-features = false, features = [] }
 hyper = "~0.12"
 yaml-rust = "~0.4"
-run_script = "~0.2"
+run_script = "~0.10.0"
 pretty_env_logger = "~0.3"
 
 [dependencies.rifling]
