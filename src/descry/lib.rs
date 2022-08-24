@@ -30,7 +30,7 @@ pub fn init(config_file: &str) -> Result<(), Box<dyn Error>>  {
 
     let events_map = config["events"].clone().into_hash().expect("Unable to convert to hashmap");
 
-    println!("Coverage for {:?} Events", events_map.keys().len());
+    println!("Listening on port :{} for {:?} Events", &config["settings"]["host"].as_str().expect("").split("0.0.0.0:").collect::<String>(), events_map.keys().len());
 
     for elem in events_map.into_iter() {
         println!(" -  {}", elem.0.into_string().expect("Failed to convert element into string"));
@@ -46,8 +46,6 @@ pub fn init(config_file: &str) -> Result<(), Box<dyn Error>>  {
     let mut cons = Constructor::new();
     let hook = Hook::new("*", secret, handler);
     cons.register(hook);
-
-    println!("\n{}", format!("Descry Actively Listening...").green().bold());
     
     let addr: SocketAddr = config["settings"]["host"]
         .as_str()
@@ -60,6 +58,8 @@ pub fn init(config_file: &str) -> Result<(), Box<dyn Error>>  {
         .map_err(|e| { 
             panic!("{} {}", format!("Error:").red().bold(), e)
         });
+
+    println!("\n{}", format!("Descry Actively Listening...").green().bold());
     
     run(server);
 
