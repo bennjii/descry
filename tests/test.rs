@@ -1,6 +1,6 @@
 use std::thread;
 use run_script::{ScriptOptions, IoOptions};
-use descry;
+use descry::{self, child_stream_to_vec};
 
 #[test]
 fn it_works() {
@@ -10,7 +10,14 @@ fn it_works() {
 
 #[test]
 fn test_push() {
-    let (svr, config) = descry::init("descry.yaml");
+    let (svr, config) = match descry::init("descry.yaml") {
+        Ok(rtn) => {
+            rtn
+        },
+        Err(err) => {
+            println!("{} Descry was unable to launch the server due to a error-handling related failure. Refer: {}", format!("Error:").red().bold(), err)
+        },
+    };
 
     let mut options = ScriptOptions::new();
     options.exit_on_error = config["settings"]["exit_on_error"]
