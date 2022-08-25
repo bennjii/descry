@@ -2,7 +2,7 @@ use std::{collections::HashMap, thread, sync::{Mutex, Arc}, io::Read};
 
 use colored::Colorize;
 use rifling::{HookFunc, Delivery, DeliveryType};
-use run_script::{ScriptOptions};
+use run_script::{ScriptOptions, types::IoOptions};
 use yaml_rust::Yaml;
 
 macro_rules! get_value {
@@ -96,27 +96,39 @@ impl HookFunc for Handler {
                 options.print_commands = self.config["settings"]["print_commands"]
                     .as_bool()
                     .unwrap_or(false);
+                options.output_redirection = IoOptions::Pipe;
                 let args = vec![];
 
                 thread::spawn(move || {
-                    let mut child = run_script::spawn_script!(&exec.as_str(), &args, &options)
+                    let child = run_script::spawn_script!(&exec.as_str(), &args, &options)
                         .expect("Failed to execute command");
-
-                    let stdout = match child.stdout.take() {
-                        Some(e) => {
-                            String::from_utf8(child_stream_to_vec(e).lock().expect("").to_owned()).expect("")
+                    
+                    let handler = match child.stdout {
+                        Some(a) => {
+                            child_stream_to_vec(a)
                         },
-                        None => format!("No Standard Output"),
+                        None => {
+                            panic!("Failed to detect .stdout on spawned child handler");
+                        },
                     };
 
-                    println!("Commands in \"{}\" section exited with the following output: {}", &section_name, &stdout);
+                    let output = String::from_utf8(handler.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
+
+                    // let output = match child.stdout.take() {
+                    //     Some(e) => {
+                    //         String::from_utf8(child_stream_to_vec(e).lock().expect("").to_owned()).expect("")
+                    //     },
+                    //     None => format!("No Standard Output"),
+                    // };
+
+                    println!("Commands in \"{}\" section exited with the following output: {}", &section_name, &output);
                 });
             }
         }
     }
 }
 
-fn child_stream_to_vec<R>(mut stream: R) -> Arc<Mutex<Vec<u8>>>
+pub fn child_stream_to_vec<R>(mut stream: R) -> Arc<Mutex<Vec<u8>>>
 where
     R: Read + Send + 'static,
 {

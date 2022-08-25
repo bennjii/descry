@@ -1,5 +1,7 @@
 mod descry;
 
+use colored::Colorize;
+use hyper::rt::{run, Future};
 use clap::{App, Arg};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -24,7 +26,16 @@ fn main() {
 
     let config_file = matches.value_of("config").unwrap_or("descry.yaml");
 
-    if let Err(e) = descry::init(config_file) {
-        panic!("Unable to run application: {}", e);
+    match descry::init(config_file) {
+        Ok((err_prone_server, _config)) => {
+            let server = err_prone_server.map_err(|e| { 
+                panic!("{} {}", format!("Error:").red().bold(), e)
+            });
+
+            run(server);
+        },
+        Err(err) => {
+            println!("{} Descry was unable to launch the server due to a error-handling related failure. Refer: {}", format!("Error:").red().bold(), err)
+        },
     }
 }

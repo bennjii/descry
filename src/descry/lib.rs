@@ -2,14 +2,14 @@ use std::{error::Error, fs::File, io::{BufReader, Read}, process, net::{SocketAd
 use colored::Colorize;
 
 use rifling::{Constructor, Hook};
-use yaml_rust::YamlLoader;
+use yaml_rust::{YamlLoader, Yaml};
 
-use hyper::rt::{run, Future};
+use hyper::{server::conn::AddrIncoming};
 use hyper::Server;
 
 use crate::descry::Handler;
 
-pub fn init(config_file: &str) -> Result<(), Box<dyn Error>>  {
+pub fn init(config_file: &str) -> Result<(Server<AddrIncoming, Constructor>, Yaml), Box<dyn Error>>  {
     let mut config_content = String::new();
     let config_file = match File::open(config_file) {
         Ok(file) => {
@@ -54,14 +54,9 @@ pub fn init(config_file: &str) -> Result<(), Box<dyn Error>>  {
         .expect("Unable to parse host address");
 
     let server = Server::bind(&addr)
-        .serve(cons)
-        .map_err(|e| { 
-            panic!("{} {}", format!("Error:").red().bold(), e)
-        });
+        .serve(cons);
 
     println!("\n{}", format!("Descry Actively Listening...").green().bold());
-    
-    run(server);
 
-    Ok(())
+    Ok((server, config.to_owned()))
 }
