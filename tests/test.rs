@@ -1,6 +1,7 @@
 use std::thread;
 use run_script::{ScriptOptions, IoOptions};
 use descry::{self, child_stream_to_vec};
+use colored::Colorize;
 
 #[test]
 fn it_works() {
@@ -15,7 +16,7 @@ fn test_push() {
             rtn
         },
         Err(err) => {
-            println!("{} Descry was unable to launch the server due to a error-handling related failure. Refer: {}", format!("Error:").red().bold(), err)
+            panic!("{} Descry was unable to launch the server due to a error-handling related failure. Refer: {}", format!("Error:").red().bold(), err)
         },
     };
 
@@ -28,8 +29,6 @@ fn test_push() {
         .unwrap_or(false);
     options.output_redirection = IoOptions::Pipe;
     let args = vec![];
-
-    assert_eq!(config["settings"]["host"], "0.0.0.0:8443");
 
     thread::spawn(move || {
         let child = run_script::spawn_script!("push", &args, &options)
