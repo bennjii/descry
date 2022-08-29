@@ -1,3 +1,3 @@
 mod descry;
 
-pub use descry::*;
+pub use self::descry::*;
