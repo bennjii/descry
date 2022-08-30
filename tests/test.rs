@@ -31,20 +31,27 @@ fn test_push() {
     let args = vec![];
 
     thread::spawn(move || {
-        let child = run_script::spawn_script!("push", &args, &options)
-            .expect("Failed to execute command");
+        println!("Spawned Thread to Handle PUSH script.");
+
+        let child = run_script::spawn("push", &args, &options).unwrap();
+        let spawn_output = child.wait_with_output().unwrap();
+    
+        println!("Success: {}", &spawn_output.status.success());
+
+        // let child = run_script::spawn_script!("push", &args, &options)
+        //     .expect("Failed to execute command");
         
-        let handler = match child.stdout {
-            Some(a) => {
-                child_stream_to_vec(a)
-            },
-            None => {
-                panic!("Failed to detect .stdout on spawned child handler");
-            },
-        };
+        // let handler = match child.stdout {
+        //     Some(a) => {
+        //         child_stream_to_vec(a)
+        //     },
+        //     None => {
+        //         panic!("Failed to detect .stdout on spawned child handler");
+        //     },
+        // };
 
-        let output = String::from_utf8(handler.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
+        // let output = String::from_utf8(handler.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
 
-        println!("Commands in \"{}\" section exited with the following output: {}", "push", &output);
+        // println!("Commands in \"{}\" section exited with the following output: {}", "push", &output);
     });
 }
