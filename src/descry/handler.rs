@@ -136,7 +136,7 @@ where
     let vec = out.clone();
 
     thread::spawn(move || loop {
-        let mut buf = [0];
+        let mut buf = [0;5];
         match stream.read(&mut buf) {
             Err(err) => {
                 println!("{}] Error reading from stream: {}", line!(), err);

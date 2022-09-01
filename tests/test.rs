@@ -1,4 +1,7 @@
-use std::thread;
+
+use std::{process::{Command, Stdio}, fmt::Error, io::{BufReader, BufRead}};
+
+use clap::ErrorKind;
 use run_script::{ScriptOptions, IoOptions};
 use descry::{self, child_stream_to_vec};
 use colored::Colorize;
@@ -11,7 +14,7 @@ fn it_works() {
 
 #[test]
 fn test_push() {
-    let (svr, config) = match descry::init("descry.yaml") {
+    let (_svr, config) = match descry::init("descry.yaml") {
         Ok(rtn) => {
             rtn
         },
@@ -28,30 +31,46 @@ fn test_push() {
         .as_bool()
         .unwrap_or(false);
     options.output_redirection = IoOptions::Pipe;
-    let args = vec![];
+    // let args = vec![];
 
-    thread::spawn(move || {
+    // thread::spawn(move || {
         println!("Spawned Thread to Handle PUSH script.");
 
-        let child = run_script::spawn("push", &args, &options).unwrap();
-        let spawn_output = child.wait_with_output().unwrap();
-    
-        println!("Success: {}", &spawn_output.status.success());
+        let mut child = Command::new("cat")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("!cat");
 
-        // let child = run_script::spawn_script!("push", &args, &options)
+        // let mut child = run_script::spawn_script!(config["events"]["ping"].as_str().expect("Failed to obtain PING"), &args, &options)
         //     .expect("Failed to execute command");
-        
-        // let handler = match child.stdout {
-        //     Some(a) => {
-        //         child_stream_to_vec(a)
-        //     },
-        //     None => {
-        //         panic!("Failed to detect .stdout on spawned child handler");
-        //     },
-        // };
 
-        // let output = String::from_utf8(handler.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
+        let out = child_stream_to_vec(child.stdout.take().expect("!stdout"));
+        let err = child_stream_to_vec(child.stderr.take().expect("!stderr"));
 
-        // println!("Commands in \"{}\" section exited with the following output: {}", "push", &output);
-    });
+        let output = String::from_utf8(out.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
+        let error = String::from_utf8(err.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
+
+        println!("Commands in \"{}\" section exited with the following output: {} \n and error: {}", "push", &output, &error);
+    // });
+}
+
+#[test]
+fn alt_test() -> Result<(), Error> {
+    let stdout = Command::new("strace")
+        .args(&["-p", ""])
+        .stdout(Stdio::piped())
+        .spawn()?
+        .stdout
+        .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))?;
+
+    let reader = BufReader::new(stdout);
+    
+    reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .for_each(|line| println!("hello {}", line));
+
+     Ok(())
 }
