@@ -1,7 +1,6 @@
 
-use std::{process::{Command, Stdio}, fmt::Error, io::{BufReader, BufRead}};
+use std::{process::{Command, Stdio}, io::{BufReader, BufRead, Error, ErrorKind}, thread};
 
-use clap::ErrorKind;
 use run_script::{ScriptOptions, IoOptions};
 use descry::{self, child_stream_to_vec};
 use colored::Colorize;
@@ -13,7 +12,7 @@ fn it_works() {
 }
 
 #[test]
-fn test_push() {
+fn test_push() -> Result<(), Error> {
     let (_svr, config) = match descry::init("descry.yaml") {
         Ok(rtn) => {
             rtn
@@ -31,37 +30,40 @@ fn test_push() {
         .as_bool()
         .unwrap_or(false);
     options.output_redirection = IoOptions::Pipe;
-    // let args = vec![];
 
-    // thread::spawn(move || {
+    let handler = thread::spawn(move || {
         println!("Spawned Thread to Handle PUSH script.");
 
-        let mut child = Command::new("cat")
-            .stdin(Stdio::piped())
+        let stdout = Command::new("sh")
+            .args(["-C", &format!("scripts/{}.sh", "push")])
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("!cat");
+            .spawn().expect("Could not spawn child process")
+            .stdout
+            .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))
+            .expect("Failed to start output pipe");
 
-        // let mut child = run_script::spawn_script!(config["events"]["ping"].as_str().expect("Failed to obtain PING"), &args, &options)
-        //     .expect("Failed to execute command");
+        let reader = BufReader::new(stdout);
 
-        let out = child_stream_to_vec(child.stdout.take().expect("!stdout"));
-        let err = child_stream_to_vec(child.stderr.take().expect("!stderr"));
+        let mut output = String::new();
+        
+        reader
+            .lines()
+            .filter_map(|line| line.ok())
+            .for_each(|line| {
+                println!("hello {}", line);
+                output.insert_str(output.len(), &line);
+            });
+    }).join();
 
-        let output = String::from_utf8(out.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
-        let error = String::from_utf8(err.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
-
-        println!("Commands in \"{}\" section exited with the following output: {} \n and error: {}", "push", &output, &error);
-    // });
+    Ok(())
 }
 
 #[test]
 fn alt_test() -> Result<(), Error> {
-    let stdout = Command::new("strace")
-        .args(&["-p", ""])
+    let stdout = Command::new("sh")
+        .args(["-C", "scripts/test.sh"])
         .stdout(Stdio::piped())
-        .spawn()?
+        .spawn().expect("Could not spawn child process")
         .stdout
         .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))?;
 
@@ -72,5 +74,5 @@ fn alt_test() -> Result<(), Error> {
         .filter_map(|line| line.ok())
         .for_each(|line| println!("hello {}", line));
 
-     Ok(())
+    Ok(())
 }
