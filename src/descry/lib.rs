@@ -1,4 +1,4 @@
-use std::{error::Error, fs::File, io::{BufReader, Read}, process, net::{SocketAddr}};
+use std::{error::Error, fs::{File, self}, io::{BufReader, Read, Write}, process, net::{SocketAddr}};
 use colored::Colorize;
 
 use rifling::{Constructor, Hook};
@@ -6,6 +6,7 @@ use yaml_rust::{YamlLoader, Yaml};
 
 use hyper::{server::conn::AddrIncoming};
 use hyper::Server;
+use std::env;
 
 use crate::descry::Handler;
 
@@ -32,8 +33,21 @@ pub fn init(config_file: &str) -> Result<(Server<AddrIncoming, Constructor>, Yam
 
     println!("Listening on port :{} for {:?} Events", &config["settings"]["host"].as_str().expect("").split("0.0.0.0:").collect::<String>(), events_map.keys().len());
 
+    let temp_directory = env::temp_dir().join("descry").to_path_buf();
+    let directory_as_string = temp_directory.as_path().display();
+
+    println!("Creating in temporary directory: {}", format!("{}", directory_as_string).green().bold());
+
+    fs::create_dir_all(directory_as_string.to_string()).expect("Was unable to create /scripts directory");
+
     for elem in events_map.into_iter() {
-        println!(" -  {}", elem.0.into_string().expect("Failed to convert element into string"));
+        let item_name = elem.0.into_string().expect("Unable to scrub name for element");
+        let item_value = elem.1.into_string().expect("Unable to scrub value for element");
+
+        let mut file = fs::File::create(format!("{}/{}.sh", directory_as_string, item_name)).expect("Failed to create file in scripts folder");
+        writeln!(&mut file, "{}", item_value).unwrap();
+
+        println!(" -  {}", item_name);
     }
 
     let secret = if let Some(secret) = config["settings"]["secret"].as_str() {

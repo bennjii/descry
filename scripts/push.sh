@@ -1,6 +1,4 @@
-max=50
-for i in `seq 2 $max`
-do
-    echo "$i"
-    sleep 0.1
-done
+git pull origin master
+npm run build
+pm2 restart reseda
+

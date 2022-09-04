@@ -2,7 +2,6 @@
 use std::{process::{Command, Stdio}, io::{BufReader, BufRead, Error, ErrorKind}, thread};
 
 use run_script::{ScriptOptions, IoOptions};
-use descry::{self, child_stream_to_vec};
 use colored::Colorize;
 
 #[test]
@@ -31,7 +30,7 @@ fn test_push() -> Result<(), Error> {
         .unwrap_or(false);
     options.output_redirection = IoOptions::Pipe;
 
-    let handler = thread::spawn(move || {
+    let _handler = thread::spawn(move || {
         println!("Spawned Thread to Handle PUSH script.");
 
         let stdout = Command::new("sh")

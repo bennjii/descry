@@ -1,0 +1,1 @@
+echo "This command will be executed in all the events, the current event is {event}" > a.txt

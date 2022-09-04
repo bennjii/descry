@@ -1,9 +1,10 @@
-use std::{collections::HashMap, thread, sync::{Mutex, Arc}, io::Read};
+use std::{collections::HashMap, thread, io::{ErrorKind, Error, BufReader, BufRead}, process::{Command, Stdio}};
 
 use colored::Colorize;
 use rifling::{HookFunc, Delivery, DeliveryType};
 use run_script::{ScriptOptions, types::IoOptions};
 use yaml_rust::Yaml;
+use std::env;
 
 macro_rules! get_value {
     ($source:expr) => {
@@ -87,8 +88,9 @@ impl HookFunc for Handler {
 
         // Execute the commands
         for (section_name, command) in commands_all {
-            if let Some(exec) = command {
+            if let Some(_exec) = command {
                 println!("Running commands in \"{}\" section", format!("{}", &section_name).green().bold());
+
                 let mut options = ScriptOptions::new();
                 options.exit_on_error = self.config["settings"]["exit_on_error"]
                     .as_bool()
@@ -97,65 +99,36 @@ impl HookFunc for Handler {
                     .as_bool()
                     .unwrap_or(false);
                 options.output_redirection = IoOptions::Pipe;
-                let args = vec![];
 
-                thread::spawn(move || {
-                    let child = run_script::spawn_script!(&exec.as_str(), &args, &options)
-                        .expect("Failed to execute command");
+                let _handler = thread::spawn(move || {
+                    println!("Spawned Thread to Handle PUSH script.");
+
+                    let temp_directory = env::temp_dir().join("descry").to_path_buf();
+                    let directory_as_string = temp_directory.as_path().display();
+
+                    let stdout = Command::new("sh")
+                        .args(["-C", &format!("{}/{}.sh", directory_as_string, section_name)])
+                        .stdout(Stdio::piped())
+                        .spawn().expect("Could not spawn child process")
+                        .stdout
+                        .ok_or_else(|| Error::new(ErrorKind::Other,"Could not capture standard output."))
+                        .expect("Failed to start output pipe");
+
+                    let reader = BufReader::new(stdout);
+
+                    let mut output = String::new();
                     
-                    let handler = match child.stdout {
-                        Some(a) => {
-                            child_stream_to_vec(a)
-                        },
-                        None => {
-                            panic!("Failed to detect .stdout on spawned child handler");
-                        },
-                    };
+                    reader
+                        .lines()
+                        .filter_map(|line| line.ok())
+                        .for_each(|line| {
+                            println!("hello {}", line);
+                            output.insert_str(output.len(), &line);
+                        });
+                }).join();
 
-                    let output = String::from_utf8(handler.lock().expect("Failed to obtain lock on output").to_owned()).expect("Failed to stringify output");
-
-                    // let output = match child.stdout.take() {
-                    //     Some(e) => {
-                    //         String::from_utf8(child_stream_to_vec(e).lock().expect("").to_owned()).expect("")
-                    //     },
-                    //     None => format!("No Standard Output"),
-                    // };
-
-                    println!("Commands in \"{}\" section exited with the following output: {}", &section_name, &output);
-                });
+                println!("Completed!");
             }
         }
     }
-}
-
-pub fn child_stream_to_vec<R>(mut stream: R) -> Arc<Mutex<Vec<u8>>>
-where
-    R: Read + Send + 'static,
-{
-    let out = Arc::new(Mutex::new(Vec::new()));
-    let vec = out.clone();
-
-    thread::spawn(move || loop {
-        let mut buf = [0;5];
-        match stream.read(&mut buf) {
-            Err(err) => {
-                println!("{}] Error reading from stream: {}", line!(), err);
-                break;
-            }
-            Ok(got) => {
-                if got == 0 {
-                    break;
-                } else if got == 1 {
-                    vec.lock().expect("!lock").push(buf[0])
-                } else {
-                    println!("{}] Unexpected number of bytes: {}", line!(), got);
-                    break;
-                }
-            }
-        }
-
-        println!("Received from Stream: {}", buf[0]);
-    });
-
-    out
 }
