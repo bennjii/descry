@@ -1,6 +1,6 @@
 [package]
 name = "descry"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["bennjii"]
 description = "GitHub Webhook Listener and Runner"
 keywords = ["github", "webhook"]
