@@ -122,7 +122,7 @@ impl HookFunc for Handler {
                         .lines()
                         .filter_map(|line| line.ok())
                         .for_each(|line| {
-                            println!("hello {}", line);
+                            println!("> {}", line);
                             output.insert_str(output.len(), &line);
                         });
                 }).join();
