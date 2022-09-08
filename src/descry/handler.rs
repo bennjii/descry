@@ -52,6 +52,7 @@ impl Handler {
 impl HookFunc for Handler {
     /// Handle the delivery
     fn run(&self, delivery: &Delivery) {
+        // Check if its running on a branch that is verified or that is wishing to be run, otherwise fork branches can be created which have the possibility of spam RCE to stall the server.
         println!("Running {:#?}", delivery.delivery_type);
 
         let event = get_value!(&delivery.event);
@@ -116,15 +117,18 @@ impl HookFunc for Handler {
 
                     let reader = BufReader::new(stdout);
 
-                    let mut output = String::new();
+                    thread::spawn(|| {
+                        let mut output = String::new();
                     
-                    reader
-                        .lines()
-                        .filter_map(|line| line.ok())
-                        .for_each(|line| {
-                            println!("> {}", line);
-                            output.insert_str(output.len(), &line);
-                        });
+                        reader
+                            .lines()
+                            .filter_map(|line| line.ok())
+                            .for_each(|line| {
+                                println!("> {}", line);
+                                output.insert_str(output.len(), &line);
+                            });
+                    })
+                    
                 }).join();
 
                 println!("Completed!");
