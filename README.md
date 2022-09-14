@@ -1,6 +1,6 @@
 # `descry`
 
-A Github Action-Based CLI code exececutor for dynamic deployment of code.
+A Github Action-Based CLI code executor for dynamic deployment of code.
 > This project is built upon RedL0tus' [`rifling`](https://github.com/RedL0tus/rifling) rust crate, handling the Github Webhook Parsing.
 
 ## Installation
