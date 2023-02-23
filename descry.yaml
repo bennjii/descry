@@ -2,7 +2,6 @@ settings:
   host: 0.0.0.0:8443
   secret: "<VEUvZrd$iZ@~J3!CFZP"
   print_commands: true
-  capture_output: false
   exit_on_error: true
 
 events:
