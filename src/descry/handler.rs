@@ -5,6 +5,8 @@ use rifling::{HookFunc, Delivery, DeliveryType};
 use run_script::{ScriptOptions, types::IoOptions};
 use yaml_rust::Yaml;
 use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 
 macro_rules! get_value {
     ($source:expr) => {
@@ -53,13 +55,11 @@ impl HookFunc for Handler {
     /// Handle the delivery
     fn run(&self, delivery: &Delivery) {
         // Check if its running on a branch that is verified or that is wishing to be run, otherwise fork branches can be created which have the possibility of spam RCE to stall the server.
-        println!("Running {:#?}", delivery.delivery_type);
-
         let event = get_value!(&delivery.event);
         match &delivery.delivery_type {
             DeliveryType::GitHub => {
                 let id = get_value!(&delivery.id);
-                println!("Delivery ID: \"{}\"", id);
+                println!("Delivery ID: {}", id);
             }
             _ => {
                 println!(
@@ -89,9 +89,7 @@ impl HookFunc for Handler {
 
         // Execute the commands
         for (section_name, command) in commands_all {
-            if let Some(_exec) = command {
-                println!("Running commands in \"{}\" section", format!("{}", &section_name).green().bold());
-
+            if let Some(exec) = command {
                 let mut options = ScriptOptions::new();
                 options.exit_on_error = self.config["settings"]["exit_on_error"]
                     .as_bool()
@@ -101,14 +99,23 @@ impl HookFunc for Handler {
                     .unwrap_or(false);
                 options.output_redirection = IoOptions::Pipe;
 
+                // We have gathered all of the commands into their respective categories and joined them together.
+                // Then, we parse and execute these commands - most efficient method.
                 let _handler = thread::spawn(move || {
-                    println!("Spawned Thread to Handle PUSH script.");
-
                     let temp_directory = env::temp_dir().join("descry").to_path_buf();
                     let directory_as_string = temp_directory.as_path().display();
 
+                    println!("Running commands in \"{}\" section ({})", format!("{}", &section_name).green().bold(), format!("{}/{}.sh", directory_as_string, &section_name).green().bold());
+                    println!("Command Format: \n\n{}\n\n", format!("{}", &exec).green().bold());
+
+                    // As this is a custom category, we need to use the custom generated commands - which we have generated.
+                    // We save these to a temp file in the temp directory with the name following: <category_type>-temp.sh
+                    let mut file = File::create(&format!("{}/{}-temp.sh", directory_as_string, &section_name)).unwrap();
+                    file.write_all(&exec.as_bytes()).unwrap();
+
+                    // Run this temporary file.
                     let stdout = Command::new("sh")
-                        .args(["-C", &format!("{}/{}.sh", directory_as_string, section_name)])
+                        .args(["-C", &format!("{}/{}-temp.sh", directory_as_string, &section_name)])
                         .stdout(Stdio::piped())
                         .spawn().expect("Could not spawn child process")
                         .stdout
@@ -117,21 +124,20 @@ impl HookFunc for Handler {
 
                     let reader = BufReader::new(stdout);
 
-                    thread::spawn(|| {
+                    thread::spawn(move || {
+                        let saved_name = section_name.clone();
                         let mut output = String::new();
                     
                         reader
                             .lines()
                             .filter_map(|line| line.ok())
                             .for_each(|line| {
-                                println!("> {}", line);
+                                println!("[{}] {}", &saved_name, line);
                                 output.insert_str(output.len(), &line);
                             });
                     })
                     
                 }).join();
-
-                println!("Completed!");
             }
         }
     }

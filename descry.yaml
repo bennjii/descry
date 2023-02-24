@@ -6,17 +6,24 @@ settings:
 
 events:
   common: echo "Common Task Executed"
-  all: echo "This command will be executed in all the events, the current event is {event}" > a.txt
+  all: echo "This command will be executed in all the events, the current event is {event}"
   else: echo "\"${SENDER}\" with ID \"${SENDER_ID}\" sent {event} event";
   push: |
-    git pull origin master
-    npm run build
-    pm2 restart reseda
+    if git pull origin master ; then
+        if npm run build ; then
+            pm2 restart reseda
+        else
+            echo "Failed to build."
+        fi
+    else
+        echo "Failed to fetch upstream changes"
+    fi
   watch: |
     ACTION=$(get_prop '.action');
     echo "GitHub user \"${SENDER}\" with ID \"${SENDER_ID}\" ${ACTION} watching this repository";
-  ping: | 
-    for ((i = 0 ; i < 100 ; i++)); do
+  ping: |
+    echo "Pinged!"
+    for ((i = 0 ; i < 10 ; i++)); do
       echo $i
       sleep 0.1
     done
